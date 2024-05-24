@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-bs-theme="auto">
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OneAgent Flag Enablement</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">OneAgent Flag Enablement</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+        </div>
+      </nav>
+    
+    <main class="container">
+        <br>
+        <br>
+        <div class="bg-body-tertiary p-5 rounded">
+            <div class="mb-3">
+                <label for="url" class="form-label">Tenat URL</label>
+                <input type="text" class="form-control" id="url" placeholder="https://TENANT_ID.live.dynatrace.com">
+            </div>
+            <div class="mb-3">
+                <label for="token" class="form-label">Token</label>
+                <input type="password" class="form-control" id="token" rows="3"></input>
+            </div>
+            <div class="mb-3">
+                <label for="mzname" class="form-label">Managment Zone</label>
+                <input type="text" class="form-control" id="mzname" placeholder="example">
+            </div>
+            <div class="mb-3">
+                <label for="ffname" class="form-label">Feature Flag</label>
+                <select class="form-select" aria-label="Featere Flag" id="ffname">
+                    <option value="SENSOR_DOTNET_WCF">SENSOR_DOTNET_WCF</option>
+                    <option value="SENSOR_DOTNET_ADO">SENSOR_DOTNET_ADO</option>
+                    <option value="DOTNET_HTTPTAGGING_HTTPCLIENT">DOTNET_HTTPTAGGING_HTTPCLIENT</option>
+                    <option value="SENSOR_DOTNET_ASPNET">SENSOR_DOTNET_ASPNET</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="ffstate" class="form-label">State</label>
+                <select class="form-select" aria-label="Featere Flag" id="ffstate">
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="runAction()">Send</button>
+        </div>
+        
+
+        <div class="bg-body-tertiary p-5 rounded">
+            <div class="alert alert-success" role="alert" id="entitiesCount" hidden>
+                
+            </div>
+        </div>
+    </main>
+
+</body>
+
+
+
+<script>
+
+function runAction(){
+
+    var url = $('#url').val();
+    var token = $('#token').val();
+    var mzname = $('#mzname').val();
+    var ffname = $('#ffname').val();
+    var ffstate = $('#ffstate').val();
+    getEntites(url,mzname,token)
+}
+
+function getEntites(url,mzname,token){
+let entitiesURL= url+'/api/v2/entities?pageSize=1500&entitySelector=type("PROCESS_GROUP"),mzName("'+mzname+'")';
+fetch(entitiesURL,{
+      method: 'GET',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Authorization': 'Api-Token '+token,
+        'Content-Type': 'application/json; charset=utf-8',
+        'accept': 'application/json; charset=utf-8'
+      }
+    })
+  .then(response => {
+    // Check if the response is successful
+    if (!response.ok) {
+        console.error('Network response was not ok ' + response.statusText);
+    }
+    else {
+        let res = response.json();
+        $('#entitiesCount').removeClass('hidden')
+        $('#entitiesCount').val('There were <b>'+res.totalCount+'</b> Process Groups found.')
+        //entities
+
+    }
+
+  })
+  .then(data => {
+    // Handle the data from the response
+    console.log(data);
+  })
+  .catch(error => {
+    // Handle any errors
+    console.error('There has been a problem with your fetch operation:', error);
+  });
+
+}
+
+
+
+
+/*
+// Sample array of strings
+const objectArray = myResult.records
+
+// Function to perform the HTTP call
+async function performHttpCall(batch) {
+  let settObj = []
+  batch.forEach(function(process) {
+    settObj.push({
+    "schemaId": "builtin:oneagent.features",
+    "schemaVersion": "1.5.9",
+    "scope": process,
+    "value": {
+      "enabled": ex.input.state,
+      "key":ex.input.sensor,
+      "instrumentation":ex.input.state
+    }
+  })
+  });
+    
+  
+  try {
+    const response = await fetch(ex.params.url+'/api/v2/settings/objects?validateOnly=false', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'accept': 'application/json; charset=utf-8',
+        'Authorization': 'Api-Token '+ex.params.token
+      },
+      body: JSON.stringify(settObj)
+    });
+    
+    if (!response.ok) {
+      console.error('Error performing HTTP call:', JSON.stringify(response));
+    }
+
+    const result = await response.json();
+    console.log('Batch result:', JSON.stringify(result));
+  } catch (error) {
+    console.error('Error performing HTTP call:', error);
+  }
+
+}
+
+// Function to process the array in batches
+async function processArrayInBatches(array, key, batchSize) {
+  for (let i = 0; i < array.length; i += batchSize) {
+    const batch = array.slice(i, i + batchSize).map(obj => obj[key]);
+    await performHttpCall(batch);
+  }
+}
+
+// Execute the function
+processArrayInBatches(objectArray, 'id', 100);
+*/
+</script>
+
+</html>
